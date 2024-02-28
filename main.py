@@ -30,7 +30,9 @@ async def on_ready():
 
   bot.add_command(ping)
   bot.add_command(rank)
+
   bot.add_command(scan)
+  bot.add_command(forget)
 
   conn_string = "./Nito.db"
 
@@ -60,14 +62,8 @@ async def on_message(message):
   await bot.process_commands(message)
 
   process_message_event(message)
-  
 
-@commands.command(brief="pong", description="test for correct bot connection")
-async def ping(ctx):
-  print("ping called!")
-  await ctx.send("pong")
-
-@commands.command(brief="raking", description="show the top ten members how have said the nword previously")
+@commands.command(brief="Show the top 10 members with more mentions of the nword")
 async def rank(ctx):
 
   cursor = connection.cursor()
@@ -79,20 +75,35 @@ async def rank(ctx):
   content = ""
 
   for i, row in enumerate(rows):
-    user_id = row[2]
+    user_id = int(row[2])
     nword_count = row[3]
 
-    user = await bot.fetch_user(user_id)
+    print(user_id)
+    print(ctx.message.author.id)
+    member = await ctx.guild.fetch_member(user_id)
 
-    content += f"\n {i}. {user.name} said it {nword_count} times"
+    print(member)
+
+    #[TODO] handle the case in which a member has abandon the server
+    if not member: 
+      continue
+
+    name = member.nick if member.nick != None else member.name
+
+    content += f"{i}. **{name}** ({nword_count}) \n"
 
   em = discord.Embed(title="NWord Rank", description=content)
 
   cursor.close()
 
   await ctx.send(embed=em)
-  
-@commands.command(brief="scanner", description="scan all the server channels for previous mentions of the nword, it will scan at most the las 5000 messages of each channel")
+
+@commands.command(hidden=True, brief="pong", description="test for correct bot connection")
+async def ping(ctx):
+  print("ping called!")
+  await ctx.send("pong")
+
+@commands.command(hidden=True, brief="scanner", description="scan all the server channels for previous mentions of the nword, it will scan at most the las 5000 messages of each channel")
 async def scan(ctx):
   
   # check if the server has been scanned before
@@ -118,7 +129,7 @@ async def scan(ctx):
     await ctx.send(f"scanning channel: {channel.name}")
 
     try:
-      async for message in channel.history(limit=5000):
+      async for message in channel.history(limit=None):
         occurrences += process_message_event(message)
     except discord.errors.Forbidden:
       await ctx.send(f"Nito lacks permisions to scan channel: {channel.name}")
@@ -140,6 +151,34 @@ async def scan(ctx):
     cursor.close()
 
   pass
+
+@commands.command(hidden=True)
+async def forget(ctx):
+  print(f"forget called (Guild ID: {ctx.guild.id})")
+
+  # this command can only be run by me
+  if(ctx.message.author.id != 334016584093794305):
+    await ctx.send("This command shall only be run by master Wissens")
+    return 
+  
+  # clear all records from this server
+  try:
+    cursor = connection.cursor()
+
+    cursor.execute("DELETE FROM nword_events WHERE guild_id = ?;", [ctx.guild.id])
+    cursor.execute("DELETE FROM guild_members WHERE guild_id = ?;", [ctx.guild.id])
+    cursor.execute("UPDATE guilds SET scanned = ? WHERE guild_id = ?;", [False, ctx.guild.id])
+
+    connection.commit()
+
+  except connection.Error as e:
+    print(repr(e))
+    connection.rollback()
+
+  finally:
+    cursor.close()
+
+  await ctx.send("All message history for this server has been deleted!")
 
 ######## Utils ########
 def date_to_sqlite_date(datetime):
