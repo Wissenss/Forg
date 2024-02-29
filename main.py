@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import random
 
 import traceback
 import sys
@@ -45,12 +46,13 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 async def on_ready():
   print("Nito is online!")
 
-  bot.add_command(ping)
-  bot.add_command(rank)
   bot.add_command(top)
+  bot.add_command(rank)
+  bot.add_command(quote)
 
   bot.add_command(scan)
   bot.add_command(forget)
+  bot.add_command(ping)
 
   conn_string = "./Nito.db"
 
@@ -167,11 +169,41 @@ async def rank(ctx, member:discord.Member = None):
 
   await ctx.send(embed=em)
 
-@commands.command(hidden=True, brief="pong", description="test for correct bot connection")
-async def ping(ctx):
-  print("ping called!")
-  await ctx.send("pong")
+@commands.command(brief="Get a random message where someone said the nword")
+async def quote(ctx, member:discord.Member = None):
+  if not member:
+    member = ctx.message.author
 
+  guild_id = ctx.guild.id
+  member_id = member.id
+
+  cursor = connection.cursor()
+
+  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member_id])
+
+  rows = cursor.fetchall()
+  
+  rows_count = len(rows)
+
+  member_name = member.nick if member.nick else member.name
+
+  if rows_count == 0:
+    await ctx.send(f"{member_name} has no mentions of the nword yet")
+    return
+
+  row = rows[random.randint(0, rows_count - 1)]
+
+  date = sqlite_date_to_date(row[7])
+  message = row[4]
+  jump_url = row[6]
+
+  description = f"\n_\" {message} \"_\n"
+
+  em = discord.Embed(title=f"{member_name}", description=description, timestamp=date, url=jump_url)
+
+  await ctx.send(embed=em)
+
+######## Dev Commands ########
 @commands.command(hidden=True, brief="scanner", description="scan all the server channels for previous mentions of the nword, it will scan at most the las 5000 messages of each channel")
 async def scan(ctx):
   
@@ -249,6 +281,12 @@ async def forget(ctx):
     cursor.close()
 
   await ctx.send("All message history for this server has been deleted!")
+
+@commands.command(hidden=True, brief="pong", description="test for correct bot connection")
+async def ping(ctx):
+  print("ping called!")
+  await ctx.send("pong")
+
 
 ######## Utils ########
 def date_to_sqlite_date(datetime):
