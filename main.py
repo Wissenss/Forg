@@ -19,6 +19,20 @@ COMMAND_PREFIX = os.getenv('COMMAND_PREFIX')
 
 ######## Globals ########
 connection = None
+storage = {}
+
+"""
+the storage has the following structure:
+
+storage = {
+  guild_id : {
+    'nword_events' : {
+      member_id : [(date)]
+    },
+  }
+}
+
+"""
 
 ######## Discord ########
 intents = discord.Intents.default()
@@ -65,7 +79,14 @@ async def on_guild_join(guild):
 async def on_message(message):
   await bot.process_commands(message)
 
-  process_message_event(message)
+  if has_nwords(message):
+    if not is_timeout(message.guild.id, message.author.id):
+      register_message_event(message.guild.id, message.author.id)
+      process_nword_message_event(message)
+    else:
+      author_name = message.author.nick if message.author.nick else message.author.name
+
+      await message.channel.send(f"**{author_name}** pass is temporarly revoked")
 
 @bot.event
 async def on_command_error(ctx: commands.Context, error):
@@ -178,7 +199,8 @@ async def scan(ctx):
 
     try:
       async for message in channel.history(limit=None):
-        occurrences += process_message_event(message, False)
+        if (has_nwords(message)):
+          occurrences += process_nword_message_event(message, False)
     except discord.errors.Forbidden:
       await ctx.send(f"Nito lacks permisions to scan channel: {channel.name}")
   
@@ -235,23 +257,27 @@ def date_to_sqlite_date(datetime):
 def sqlite_date_to_date(sqlite_date):
    return datetime.strptime(sqlite_date, "%Y-%m-%d %H:%M:%S")
 
-def process_message_event(message, silent=True):
+def has_nwords(message):
   target_list = ["nigga", "nigger", "negro"]
 
-  content = message.content
-  content_lower = content.lower()
-  word_count = 0
+  content_lower = message.content.lower()
 
-  if not silent:
-    print(f"processing message: {message.id} by {message.author.id}", end=" ")
+  word_count = 0
 
   for target in target_list:
     word_count += content_lower.count(target)
 
-  if word_count == 0:
-    return 0
+  if word_count > 0: 
+    return True
   else:
-    word_count = 1
+    return False
+
+def process_nword_message_event(message, silent=True):
+  content = message.content
+  word_count = 1
+
+  if not silent:
+    print(f"processing message: {message.id} by {message.author.id}", end=" ")
 
   try:
     # if there is 1 or more ocurrence of the nword we create a registry of the event
@@ -291,5 +317,47 @@ def process_message_event(message, silent=True):
     print(f"{word_count} mentions found")
   
   return word_count
+
+######## Storage Utils ########
+
+def ensure_storage(guild_id):
+  if not guild_id in storage:
+    storage[guild_id] = {
+      'nword_events' : {}
+    }
+
+def get_nword_events(guild_id, member_id):
+  events = storage[guild_id]['nword_events']
+
+  if not member_id in events:
+    storage[guild_id]['nword_events'][member_id] = []
+
+  return storage[guild_id]['nword_events'][member_id]
+
+def is_timeout(guild_id, member_id):
+  ensure_storage(guild_id)
+  
+  nword_events = get_nword_events(guild_id, member_id)
+
+  if len(nword_events) > 5:
+    oldest_date = nword_events[-4]
+    newest_date = datetime.now()
+
+    delta = newest_date - oldest_date
+
+    if delta.total_seconds() < 60:
+      return True
+  
+  return False
+
+def register_message_event(guild_id, member_id):
+  ensure_storage(guild_id)
+  
+  nword_events = get_nword_events(guild_id, member_id)
+
+  if len(nword_events) >= 10:
+    storage[guild_id]['nword_events'][member_id].pop(0)
+
+  storage[guild_id]['nword_events'][member_id].append(datetime.now())
 
 bot.run(DISCORD_TOKEN)
