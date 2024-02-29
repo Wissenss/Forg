@@ -248,8 +248,10 @@ def process_message_event(message, silent=True):
   for target in target_list:
     word_count += content_lower.count(target)
 
-  if word_count == 0 or word_count > 4:
+  if word_count == 0:
     return 0
+  else:
+    word_count = 1
 
   try:
     # if there is 1 or more ocurrence of the nword we create a registry of the event
