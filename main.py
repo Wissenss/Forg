@@ -1,6 +1,9 @@
 import os
 from datetime import datetime
 
+import traceback
+import sys
+
 import discord
 from discord.ext import commands
 
@@ -30,6 +33,7 @@ async def on_ready():
 
   bot.add_command(ping)
   bot.add_command(rank)
+  bot.add_command(top)
 
   bot.add_command(scan)
   bot.add_command(forget)
@@ -63,8 +67,18 @@ async def on_message(message):
 
   process_message_event(message)
 
+@bot.event
+async def on_command_error(ctx: commands.Context, error):
+
+  if isinstance(error, discord.ext.commands.errors.MemberNotFound):
+    await ctx.send(f"member '{error.argument}' not found")
+
+  else:
+    print(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
 @commands.command(brief="Show the top 10 members with more mentions of the nword")
-async def rank(ctx):
+async def top(ctx):
 
   cursor = connection.cursor()
 
@@ -95,6 +109,40 @@ async def rank(ctx):
   em = discord.Embed(title="NWord Rank", description=content)
 
   cursor.close()
+
+  await ctx.send(embed=em)
+
+@commands.command(brief="Show your current rank")
+async def rank(ctx, member:discord.Member = None):
+  
+  if not member:
+    member = ctx.message.author
+
+  member_id = member.id
+  guild_id = ctx.guild.id
+
+  # get the number of times the user has said the nword
+  cursor = connection.cursor()
+
+  cursor.execute("SELECT * FROM guild_members WHERE guild_id = ? AND member_id = ?;", [guild_id, member_id])
+  row = cursor.fetchone()
+
+  if row:
+    nword_count = row[3]
+  else:
+    nword_count = 0
+
+  # get the position on the ranking
+  cursor.execute("SELECT count(*) FROM guild_members WHERE guild_id = ? AND nword_count > ?", [guild_id, nword_count])
+  row = cursor.fetchone()
+
+  position = row[0] + 1
+
+  content = f"Total count: {nword_count}"
+
+  member_name = member.nick if member.nick else member.name
+
+  em = discord.Embed(title=f"{member_name} #{position}", description=content)
 
   await ctx.send(embed=em)
 
@@ -130,7 +178,7 @@ async def scan(ctx):
 
     try:
       async for message in channel.history(limit=None):
-        occurrences += process_message_event(message)
+        occurrences += process_message_event(message, False)
     except discord.errors.Forbidden:
       await ctx.send(f"Nito lacks permisions to scan channel: {channel.name}")
   
@@ -187,21 +235,21 @@ def date_to_sqlite_date(datetime):
 def sqlite_date_to_date(sqlite_date):
    return datetime.strptime(sqlite_date, "%Y-%m-%d %H:%M:%S")
 
-def process_message_event(message):
+def process_message_event(message, silent=True):
   target_list = ["nigga", "nigger", "negro"]
 
   content = message.content
   content_lower = content.lower()
   word_count = 0
 
-  print(f"processing message: {message.id} by {message.author.id}", end=" ")
+  if not silent:
+    print(f"processing message: {message.id} by {message.author.id}", end=" ")
 
   for target in target_list:
     word_count += content_lower.count(target)
 
-  if word_count == 0:
-    print("0 metions found")
-    return word_count
+  if word_count == 0 or word_count > 4:
+    return 0
 
   try:
     # if there is 1 or more ocurrence of the nword we create a registry of the event
@@ -237,7 +285,9 @@ def process_message_event(message):
     connection.rollback()
     cursor.close()
 
-  print(f"{word_count} mentions found")
+  if not silent:
+    print(f"{word_count} mentions found")
+  
   return word_count
 
 bot.run(DISCORD_TOKEN)
