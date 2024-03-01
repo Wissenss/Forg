@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 import random
 
@@ -10,13 +9,7 @@ from discord.ext import commands
 
 import sqlite3
 
-from dotenv import load_dotenv
-
-######## Settings ########
-load_dotenv(override=True)
-
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-COMMAND_PREFIX = os.getenv('COMMAND_PREFIX')
+from settings import *
 
 ######## Globals ########
 connection = None
@@ -44,7 +37,8 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
 
 @bot.event
 async def on_ready():
-  print("Nito is online!")
+  BOT_LOGGER.log(level=logging.INFO, msg="------------------- Bot is ready -------------------")
+  BOT_LOGGER.log(level=logging.INFO, msg="Loading commands...")
 
   bot.add_command(top)
   bot.add_command(rank)
@@ -54,10 +48,16 @@ async def on_ready():
   bot.add_command(forget)
   bot.add_command(ping)
 
+  BOT_LOGGER.log(level=logging.INFO, msg="Connecting to database...")
+
   conn_string = "./Nito.db"
 
   global connection 
   connection = sqlite3.connect(conn_string)
+
+  BOT_LOGGER.log(level=logging.INFO, msg="----------------------------------------------------")
+
+  print("Nito is online!")
 
 @bot.event
 async def on_guild_join(guild):
@@ -79,13 +79,21 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_message(message):
+  BOT_LOGGER.log(level=logging.DEBUG, msg=f"message event (Guild ID: {message.guild.id}) (Member ID: {message.author.id}) (Member NAME: '{message.author.name}') (Message: '{message.content}')")
+
   await bot.process_commands(message)
 
   if has_nwords(message):
+    BOT_LOGGER.log(level=logging.DEBUG, msg=f"nword messsage event (Guild ID: {message.guild.id}) (Member ID: {message.author.id}) (Member NAME: '{message.author.name}') (Message: '{message.content}')")
+
     if not is_timeout(message.guild.id, message.author.id):
+      BOT_LOGGER.log(level=logging.INFO, msg=f"valid event (Guild ID: {message.guild.id}) (Member ID: {message.author.id}) (Member NAME: '{message.author.name}') (Message: '{message.content}')")
+
       register_message_event(message.guild.id, message.author.id)
       process_nword_message_event(message)
     else:
+      BOT_LOGGER.log(level=logging.INFO, msg=f"timedout (Guild ID: {message.guild.id}) (Member ID: {message.author.id}) (Member NAME: '{message.author.name}') (Message: '{message.content}')")
+
       author_name = message.author.nick if message.author.nick else message.author.name
 
       await message.channel.send(f"**{author_name}** pass is temporarly revoked")
@@ -102,6 +110,7 @@ async def on_command_error(ctx: commands.Context, error):
 
 @commands.command(brief="Show the top 10 members with more mentions of the nword")
 async def top(ctx):
+  BOT_LOGGER.log(level=logging.INFO, msg=f"top command called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
 
   cursor = connection.cursor()
 
@@ -115,11 +124,7 @@ async def top(ctx):
     user_id = int(row[2])
     nword_count = row[3]
 
-    print(user_id)
-    print(ctx.message.author.id)
     member = await ctx.guild.fetch_member(user_id)
-
-    print(member)
 
     #[TODO] handle the case in which a member has abandon the server
     if not member: 
@@ -137,7 +142,8 @@ async def top(ctx):
 
 @commands.command(brief="Show your current rank")
 async def rank(ctx, member:discord.Member = None):
-  
+  BOT_LOGGER.log(level=logging.INFO, msg=f"rank command called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
+
   if not member:
     member = ctx.message.author
 
@@ -171,6 +177,8 @@ async def rank(ctx, member:discord.Member = None):
 
 @commands.command(brief="Get a random message where someone said the nword")
 async def quote(ctx, member:discord.Member = None):
+  BOT_LOGGER.log(level=logging.INFO, msg=f"quote command called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
+
   if not member:
     member = ctx.message.author
 
@@ -284,7 +292,8 @@ async def forget(ctx):
 
 @commands.command(hidden=True, brief="pong", description="test for correct bot connection")
 async def ping(ctx):
-  print("ping called!")
+  BOT_LOGGER.log(level=logging.INFO, msg=f"ping command called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
+
   await ctx.send("pong")
 
 
@@ -398,4 +407,4 @@ def register_message_event(guild_id, member_id):
 
   storage[guild_id]['nword_events'][member_id].append(datetime.now())
 
-bot.run(DISCORD_TOKEN)
+bot.run(DISCORD_TOKEN, log_handler=None)

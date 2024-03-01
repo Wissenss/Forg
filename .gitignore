@@ -1,3 +1,5 @@
 permissions.txt
 .env
 Nito.db
+
+/__pycache__
