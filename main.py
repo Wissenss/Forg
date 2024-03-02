@@ -83,6 +83,10 @@ async def on_message(message):
 
   await bot.process_commands(message)
 
+  #ignore messages comming from the bot itself
+  if message.author.id == bot.user.id:
+    return
+
   if has_nwords(message):
     BOT_LOGGER.log(level=logging.DEBUG, msg=f"nword messsage event (Guild ID: {message.guild.id}) (Member ID: {message.author.id}) (Member NAME: '{message.author.name}') (Message: '{message.content}')")
 
@@ -305,7 +309,7 @@ def sqlite_date_to_date(sqlite_date):
    return datetime.strptime(sqlite_date, "%Y-%m-%d %H:%M:%S")
 
 def has_nwords(message):
-  target_list = ["nigga", "nigger", "negro"]
+  target_list = ["nigga", "nigger", "negro", "nigress"]
 
   content_lower = message.content.lower()
 
