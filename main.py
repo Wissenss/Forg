@@ -186,32 +186,33 @@ async def quote(ctx, member:discord.Member = None):
   if not member:
     member = ctx.message.author
 
-  guild_id = ctx.guild.id
-  member_id = member.id
-
+  # get a random message record
   cursor = connection.cursor()
 
-  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member_id])
-
+  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
+  
   rows = cursor.fetchall()
   
   rows_count = len(rows)
 
-  member_name = member.nick if member.nick else member.name
-
   if rows_count == 0:
-    await ctx.send(f"{member_name} has no mentions of the nword yet")
+    await ctx.send(f"{member.display_name} has no mentions of the nword yet")
     return
 
   row = rows[random.randint(0, rows_count - 1)]
 
-  date = sqlite_date_to_date(row[7])
-  message = row[4]
-  jump_url = row[6]
+  # get the actual discord message
+  message_id = row[1]
+  message = await ctx.fetch_message(message_id)
 
-  description = f"\n_\" {message} \"_\n"
+  # create the embed and send it
+  content = message.content
+  date = message.created_at
+  jump_url = message.jump_url
 
-  em = discord.Embed(title=f"{member_name}", description=description, timestamp=date, url=jump_url)
+  description = f"\n_\" {content} \"_\n"
+
+  em = discord.Embed(title=f"{member.display_name}", description=description, timestamp=date, url=jump_url)
 
   await ctx.send(embed=em)
 
@@ -300,7 +301,6 @@ async def ping(ctx):
 
   await ctx.send("pong")
 
-
 ######## Utils ########
 def date_to_sqlite_date(datetime):
    return datetime.strftime("%Y-%m-%d %H:%M:%S")
@@ -370,7 +370,6 @@ def process_nword_message_event(message, silent=True):
   return word_count
 
 ######## Storage Utils ########
-
 def ensure_storage(guild_id):
   if not guild_id in storage:
     storage[guild_id] = {
