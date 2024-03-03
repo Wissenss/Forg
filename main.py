@@ -186,33 +186,48 @@ async def quote(ctx, member:discord.Member = None):
   if not member:
     member = ctx.message.author
 
-  # get a random message record
   cursor = connection.cursor()
+  while True:
+    # get a random message record
+    cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
+    
+    rows = cursor.fetchall()
+    
+    rows_count = len(rows)
 
-  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
-  
-  rows = cursor.fetchall()
-  
-  rows_count = len(rows)
+    if rows_count == 0:
+      await ctx.send(f"{member.display_name} has no mentions of the nword yet")
+      return
 
-  if rows_count == 0:
-    await ctx.send(f"{member.display_name} has no mentions of the nword yet")
-    return
+    row = rows[random.randint(0, rows_count - 1)]
 
-  row = rows[random.randint(0, rows_count - 1)]
+    # get the actual discord message
+    message_id = row[1]
 
-  # get the actual discord message
-  message_id = row[1]
-  message = await ctx.fetch_message(message_id)
+    try:
+      message = await ctx.fetch_message(message_id)
+    
+    except discord.errors.NotFound:
+      BOT_LOGGER.log(level=logging.ERROR, msg=f"message not found by discord (Guild ID: {ctx.guild.id}) (Message ID: {message_id})")
+      continue
+
+    break
+
+  cursor.close()
 
   # create the embed and send it
   content = message.content
   date = message.created_at
   jump_url = message.jump_url
+  channel = message.channel
 
-  description = f"\n_\" {content} \"_\n"
+  description = f"_\" {content} \"_\n" #[show original]({jump_url})
 
-  em = discord.Embed(title=f"{member.display_name}", description=description, timestamp=date, url=jump_url)
+  em = discord.Embed(title=description, timestamp=date, type='article') #title=f"{member.display_name}" url=jump_url description=description
+  em.set_author(name=f"{member.display_name}", url=jump_url, icon_url=member.display_avatar.url)
+  em.set_footer(text=f"")
+  # em.add_field(name=" ", value="", inline=True)
+  # em.add_field(name="", value=f"{content}", inline=True)
 
   await ctx.send(embed=em)
 
