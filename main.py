@@ -187,43 +187,48 @@ async def quote(ctx, member:discord.Member = None):
     member = ctx.message.author
 
   cursor = connection.cursor()
-  while True:
-    # get a random message record
-    cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
-    
-    rows = cursor.fetchall()
-    
-    rows_count = len(rows)
 
-    if rows_count == 0:
-      await ctx.send(f"{member.display_name} has no mentions of the nword yet")
-      return
+  # get a random message record
+  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
+  
+  rows = cursor.fetchall()
+  
+  rows_count = len(rows)
 
-    row = rows[random.randint(0, rows_count - 1)]
+  if rows_count == 0:
+    await ctx.send(f"{member.display_name} has no mentions of the nword yet")
+    return
 
-    # get the actual discord message
-    message_id = row[1]
+  row = rows[random.randint(0, rows_count - 1)]
 
-    try:
-      message = await ctx.fetch_message(message_id)
-    
-    except discord.errors.NotFound:
-      BOT_LOGGER.log(level=logging.ERROR, msg=f"message not found by discord (Guild ID: {ctx.guild.id}) (Message ID: {message_id})")
-      continue
+  # get the actual discord message
+  message_id = row[1]
 
-    break
+  try:
+    channel = bot.get_channel(row[8])
+
+    if channel == None:
+      raise Exception("discord channel not found")
+
+    message = await channel.fetch_message(message_id)
+
+    content = message.content
+    date = message.created_at
+    jump_url = message.jump_url
+  
+  except:
+    BOT_LOGGER.log(level=logging.ERROR, msg=f"message not found by discord (Guild ID: {ctx.guild.id}) (Message ID: {message_id}), using local copy...")
+
+    content = row[4]
+    date = sqlite_date_to_date(row[7])
+    jump_url = row[6]
 
   cursor.close()
 
   # create the embed and send it
-  content = message.content
-  date = message.created_at
-  jump_url = message.jump_url
-  channel = message.channel
+  description = f"_**\" {content} \"**_\n"
 
-  description = f"_\" {content} \"_\n" #[show original]({jump_url})
-
-  em = discord.Embed(title=description, timestamp=date, type='article') #title=f"{member.display_name}" url=jump_url description=description
+  em = discord.Embed(title="", description=description, timestamp=date, type='article') #title=f"{member.display_name}" url=jump_url description=description
   em.set_author(name=f"{member.display_name}", url=jump_url, icon_url=member.display_avatar.url)
   em.set_footer(text=f"")
   # em.add_field(name=" ", value="", inline=True)
@@ -357,7 +362,7 @@ def process_nword_message_event(message, silent=True):
     values[3] = content
     values[4] = word_count
     values[5] = message.jump_url
-    values[6] = date_to_sqlite_date(datetime.today())
+    values[6] = date_to_sqlite_date(message.created_at)
     
     cursor.execute("INSERT INTO nword_events(message_id, author_id, guild_id, message, word_count, jump_url, date) VALUES(?, ?, ?, ?, ?, ?, ?);", values)
 
