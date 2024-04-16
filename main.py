@@ -1,5 +1,4 @@
 import datetime
-from datetime import datetime
 import random
 
 import traceback
@@ -404,11 +403,11 @@ async def ping(ctx):
   await ctx.send("pong")
 
 ######## Utils ########
-def date_to_sqlite_date(datetime):
+def date_to_sqlite_date(datetime : datetime.datetime):
    return datetime.strftime("%Y-%m-%d %H:%M:%S")
 
-def sqlite_date_to_date(sqlite_date):
-   return datetime.strptime(sqlite_date, "%Y-%m-%d %H:%M:%S")
+def sqlite_date_to_date(sqlite_date : str):
+   return datetime.datetime.strptime(sqlite_date, "%Y-%m-%d %H:%M:%S")
 
 def has_nwords(message):
   target_list = ["nigga", "nigger", "negro", "nigress"]
@@ -507,7 +506,7 @@ def is_timeout(guild_id, member_id):
 
   if len(nword_events) > 5:
     oldest_date = nword_events[-4]
-    newest_date = datetime.now()
+    newest_date = datetime.datetime.now()
 
     delta = newest_date - oldest_date
 
@@ -524,6 +523,6 @@ def register_message_event(guild_id, member_id):
   if len(nword_events) >= 10:
     storage[guild_id]['nword_events'][member_id].pop(0)
 
-  storage[guild_id]['nword_events'][member_id].append(datetime.now())
+  storage[guild_id]['nword_events'][member_id].append(datetime.datetime.now())
 
 bot.run(DISCORD_TOKEN, log_handler=None)
