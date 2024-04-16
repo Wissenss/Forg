@@ -6,6 +6,8 @@ import logging.handlers
 import os
 from dotenv import load_dotenv
 
+import datetime
+
 load_dotenv(override=True)
 
 BOT_LOGGER = None
@@ -46,3 +48,6 @@ from dotenv import load_dotenv
 """ Configuration for Discord """
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 COMMAND_PREFIX = os.getenv('COMMAND_PREFIX')
+
+# remember, discord.py will take the utc time, so you have to account for the offset, for now 8pm mexico city is 2am utc
+DAILY_CHECK_TIME = datetime.datetime.strptime(os.getenv('DAILY_CHECK_TIME'), "%H:%M:%S").time()

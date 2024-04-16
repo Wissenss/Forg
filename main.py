@@ -1,3 +1,4 @@
+import datetime
 from datetime import datetime
 import random
 
@@ -11,8 +12,11 @@ import sqlite3
 
 from settings import *
 
+from discord.ext import tasks, commands
+
 ######## Globals ########
 connection = None
+hosting_payed = True
 storage = {}
 
 """
@@ -43,10 +47,12 @@ async def on_ready():
   bot.add_command(top)
   bot.add_command(rank)
   bot.add_command(quote)
+  bot.add_command(hosting)
 
   bot.add_command(scan)
   bot.add_command(forget)
   bot.add_command(ping)
+  bot.add_command(add_hosting)
 
   BOT_LOGGER.log(level=logging.INFO, msg="Connecting to database...")
 
@@ -54,6 +60,10 @@ async def on_ready():
 
   global connection 
   connection = sqlite3.connect(conn_string)
+
+  BOT_LOGGER.log(level=logging.INFO, msg="Starting tasks...")
+  daily_check_task.start()
+
 
   BOT_LOGGER.log(level=logging.INFO, msg="----------------------------------------------------")
 
@@ -189,14 +199,16 @@ async def quote(ctx, member:discord.Member = None):
   cursor = connection.cursor()
 
   # get a random message record
-  cursor.execute("SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ?;", [ctx.guild.id, member.id])
+  sql = "SELECT * FROM nword_events WHERE guild_id = ? AND author_id = ? AND message NOT IN ('Nigger', 'nigger', 'nigga', 'Nigga', ':negro:');"
+
+  cursor.execute(sql, [ctx.guild.id, member.id])
   
   rows = cursor.fetchall()
   
   rows_count = len(rows)
 
   if rows_count == 0:
-    await ctx.send(f"{member.display_name} has no mentions of the nword yet")
+    await ctx.send(f"{member.display_name} has no (real) mentions of the nword yet")
     return
 
   row = rows[random.randint(0, rows_count - 1)]
@@ -208,7 +220,7 @@ async def quote(ctx, member:discord.Member = None):
     channel = bot.get_channel(row[8])
 
     if channel == None:
-      raise Exception("discord channel not found")
+      channel = ctx.channel
 
     message = await channel.fetch_message(message_id)
 
@@ -217,7 +229,7 @@ async def quote(ctx, member:discord.Member = None):
     jump_url = message.jump_url
   
   except:
-    BOT_LOGGER.log(level=logging.ERROR, msg=f"message not found by discord (Guild ID: {ctx.guild.id}) (Message ID: {message_id}), using local copy...")
+    BOT_LOGGER.log(level=logging.ERROR, msg=f"message not found by discord, using local copy... (Guild ID: {ctx.guild.id}) (Message ID: {message_id})")
 
     content = row[4]
     date = sqlite_date_to_date(row[7])
@@ -236,7 +248,42 @@ async def quote(ctx, member:discord.Member = None):
 
   await ctx.send(embed=em)
 
+@commands.command(brief="Get the remaining days hosting is paid for and some more other interesting information")
+async def hosting(ctx):
+  BOT_LOGGER.log(level=logging.INFO, msg=f"hosting called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
+  
+  days_payed = get_remaining_hosting_days()
+
+  await ctx.send(f"hosting is paid for the next {days_payed} days")
+
 ######## Dev Commands ########
+
+@tasks.loop(time=DAILY_CHECK_TIME)
+async def daily_check_task():
+  BOT_LOGGER.log(level=logging.INFO, msg=f"daily check task is starting...")
+
+  days_payed = get_remaining_hosting_days()
+
+  cursor = connection.cursor()
+
+  # every day we should decrease the remaining hosting days payed
+  sql = "UPDATE configuration set value_integer = value_integer - 1 WHERE name = 'remaining_hosting_days_payed';"
+
+  cursor.execute(sql)
+
+  global hosting_payed
+
+  if days_payed > 0 or days_payed == -1000:
+    hosting_payed = True
+  else:
+    hosting_payed = False
+
+  connection.commit()
+  cursor.close()
+
+  BOT_LOGGER.log(level=logging.INFO, msg=f"remaining_hosting_days_payed is now = {days_payed}")
+  BOT_LOGGER.log(level=logging.INFO, msg=f"daily check task finished")
+
 @commands.command(hidden=True, brief="scanner", description="scan all the server channels for previous mentions of the nword, it will scan at most the las 5000 messages of each channel")
 async def scan(ctx):
   
@@ -315,6 +362,41 @@ async def forget(ctx):
 
   await ctx.send("All message history for this server has been deleted!")
 
+@commands.command(hidden=True, name="addHosting")
+async def add_hosting(ctx, hostingDays : int):
+  BOT_LOGGER.log(level=logging.INFO, msg=f"addHosting called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
+
+  # this command can only be run by me
+  if(ctx.message.author.id != 334016584093794305):
+    await ctx.send("This command shall only be run by master Wissens")
+    return 
+  
+  try:
+
+    days_payed = get_remaining_hosting_days()
+
+    if days_payed != -1000:
+
+      if days_payed < 0:
+        days_payed = 0
+
+      days_payed += hostingDays
+
+      cursor = connection.cursor()
+
+      cursor.execute("UPDATE configuration SET value_integer = ? WHERE name = 'remaining_hosting_days_payed';", [days_payed])
+
+      connection.commit()
+
+      await ctx.send(f"{hostingDays} added. Your server now has {days_payed} days of hosting remaining")
+
+  except connection.Error as e:
+    print(repr(e))
+    connection.rollback()
+
+  finally:
+    cursor.close()
+
 @commands.command(hidden=True, brief="pong", description="test for correct bot connection")
 async def ping(ctx):
   BOT_LOGGER.log(level=logging.INFO, msg=f"ping command called (Guild ID: {ctx.guild.id}) (Member ID: {ctx.message.author.id}) (Member NAME: '{ctx.message.author.name}')")
@@ -388,6 +470,20 @@ def process_nword_message_event(message, silent=True):
     print(f"{word_count} mentions found")
   
   return word_count
+
+def get_remaining_hosting_days():
+  cursor = connection.cursor()
+  
+  # now, if the days payed are less than 0, then we set this variable to false for checking on the other commands
+  sql = "SELECT value_integer FROM configuration WHERE name = 'remaining_hosting_days_payed';"
+
+  cursor.execute(sql)
+
+  days_payed = cursor.fetchone()[0]
+
+  cursor.close()
+
+  return days_payed
 
 ######## Storage Utils ########
 def ensure_storage(guild_id):
