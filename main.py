@@ -137,10 +137,9 @@ async def top(ctx):
     user_id = int(row[2])
     nword_count = row[3]
 
-    member = await ctx.guild.fetch_member(user_id)
-
-    #[TODO] handle the case in which a member has abandon the server
-    if not member: 
+    try:
+      member = await ctx.guild.fetch_member(user_id)
+    except:
       continue
 
     name = member.nick if member.nick != None else member.name
