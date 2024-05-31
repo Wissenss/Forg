@@ -173,13 +173,19 @@ async def rank(ctx, member:discord.Member = None):
   else:
     nword_count = 0
 
-  # get the position on the ranking
-  cursor.execute("SELECT count(*) FROM guild_members WHERE guild_id = ? AND nword_count > ?", [guild_id, nword_count])
-  row = cursor.fetchone()
-
-  position = row[0] + 1
-
   content = f"Total count: {nword_count}"
+
+  # get the position on the ranking
+  cursor.execute("SELECT * FROM guild_members WHERE guild_id = ? AND nword_count > ? ORDER BY nword_count", [guild_id, nword_count])
+  rows = cursor.fetchall()
+
+  position = len(rows) + 1
+
+  # get the points away from the next rank
+  if rows:
+    away_from_next_rank = rows[-1][3] - nword_count
+
+    content += f"\nAway from next rank: {away_from_next_rank}"
 
   member_name = member.nick if member.nick else member.name
 
