@@ -2,7 +2,7 @@
 
 Rolling Waves Republic Humble Assistant.
 
-# For devs
+## For devs
 
 This proyect works with both linux and windows and is written in python 3.13 using the discord.py and sqlite3 libraries.
 
