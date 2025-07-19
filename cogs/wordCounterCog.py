@@ -8,7 +8,6 @@ import discord.ext.commands
 
 import database
 import security
-from models.account import *
 
 from cogs.customCog import CustomCog
 import settings
