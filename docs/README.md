@@ -30,7 +30,7 @@ This proyect works with both linux and windows and is written in python 3.13 usi
 #### 0 - create an `.env` file in the root of the proyect like this 
 ```env
 # database
-DATABASE_PATH="./forg.db" 
+DATABASE_PATH="./forg.sqlite3" 
 
 # dbmate
 DATABASE_URL="sqlite:forg.sqlite3"
