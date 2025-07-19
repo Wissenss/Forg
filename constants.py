@@ -1,10 +1,13 @@
 from enum import Enum
+import datetime
+
+DISCORD_EPOCH = datetime.datetime(2015, 1, 1, 0, 0, 0, 0, tzinfo=datetime.timezone.utc) # the time discord was born
 
 class AccountAccessLevel(Enum):
     DEVELOPER = 0
-    ADMIN = 1
-    MODERATOR = 3
-    MEMBER = 4
+    ADMIN = 10
+    MODERATOR = 20
+    MEMBER = 30
 
 class Permission(Enum):
     # permissions for the dev cog
@@ -12,6 +15,7 @@ class Permission(Enum):
 
     # permissions for the admin cog
     ADMIN_COG = 2000
+    ADMIN_COG_ELEVATE = ADMIN_COG + 1
 
     # permissions for the word count cog
     WORD_COUNT_COG = 3000

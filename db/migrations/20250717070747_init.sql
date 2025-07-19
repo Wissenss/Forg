@@ -3,19 +3,20 @@ CREATE TABLE accounts (
     discord_user_id INTEGER,
     discord_guild_id INTEGER,
     access_level INTEGER,
-    UNIQUE(discord_user_id, discord_guild_id)
+    PRIMARY KEY(discord_user_id, discord_guild_id)
 );
 
 CREATE TABLE settings (
-    name TEXT PRIMARY KEY,
+    name PRIMARY KEY,
     discord_user_id INTEGER,
     discord_guild_id INTEGER,
+    discord_channel_id INTEGER,
     value,
-    UNIQUE(name, discord_user_id, discord_guild_id)
+    UNIQUE(name, discord_user_id, discord_guild_id, discord_channel_id)
 );
 
 CREATE TABLE messages (
-    discord_message_id INTEGER PRIMARY KEY,
+    discord_message_id INTEGER,
     discord_guild_id INTEGER,
     discord_channel_id INTEGER,
     discord_created_at TEXT,
@@ -23,7 +24,7 @@ CREATE TABLE messages (
     content TEXT,
     content_clean TEXT,
     deleted BOOLEAN DEFAULT false,
-    UNIQUE(discord_message_id)
+    PRIMARY KEY(discord_message_id)
 );
 
 CREATE TABLE messages_word_count (
@@ -32,7 +33,7 @@ CREATE TABLE messages_word_count (
     discord_channel_id INTEGER,
     discord_user_id INTEGER,
     count INTEGER,
-    UNIQUE(word, discord_guild_id, discord_channel_id, discord_user_id)
+    PRIMARY KEY(word, discord_guild_id, discord_channel_id, discord_user_id)
 );
 
 -- migrate:down

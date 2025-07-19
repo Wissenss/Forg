@@ -17,6 +17,7 @@ class Forg(commands.Bot):
 
 intents =  discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 bot = Forg(command_prefix="!", intents=intents)
 
@@ -26,10 +27,11 @@ async def on_ready():
 
 @bot.event
 async def setup_hook():
+    await bot.load_extension("cogs.adminCog")
     await bot.load_extension("cogs.generalCog")
     await bot.load_extension("cogs.wordCounterCog")
 
-    # await bot.tree.sync()
+    await bot.tree.sync()
 
     print("setup finished!")
 
