@@ -2,6 +2,19 @@
 
 Rolling Waves Republic Humble Assistant.
 
+## Discord intents and permissions
+
+The bot requires the following intents to be enabled in applications console:
+- members_intent
+- message_content_intent
+
+And the following permissions:
+- Use Slash Commands
+- Send Messages
+- Manage Messages
+- Read Message History
+- View Channels
+
 ## For devs
 
 This proyect works with both linux and windows and is written in python 3.13 using the discord.py and sqlite3 libraries.
