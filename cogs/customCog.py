@@ -2,8 +2,6 @@ import discord
 import discord.ext
 import discord.ext.commands
 
-from models.account import *
-
 import database
 
 # this class defines logic / methods that must be available in every cog
