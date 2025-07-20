@@ -6,6 +6,7 @@ import discord
 import discord.ext
 import discord.ext.commands
 
+import constants
 import database
 import security
 
