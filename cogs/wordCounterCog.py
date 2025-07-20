@@ -132,13 +132,13 @@ class WordCounterCog(CustomCog):
             # fetch channels in the guild
             scan_logs.append("fetching channels...")
             em.description = "\n".join(scan_logs)
-            await interaction.followup.edit_message(embed=em)
+            await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
 
             guild_channels = interaction.guild.text_channels
 
             scan_logs[-1] = f"fetching channels... {len(guild_channels)} found"
             em.description = "\n".join(scan_logs)
-            await interaction.followup.edit_message(embed=em)
+            await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
 
             # got through every channel in the guild
 
@@ -146,7 +146,7 @@ class WordCounterCog(CustomCog):
                 
                 scan_logs.append(f"processing channel \"{channel.name}\"... ")
                 em.description = "\n".join(scan_logs)
-                await interaction.followup.edit_message(embed=em)
+                await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
                 
                 # check the bot has permissions for this channel
 
@@ -155,7 +155,7 @@ class WordCounterCog(CustomCog):
                 if not (permissions.read_messages and permissions.read_message_history and permissions.view_channel):
                     scan_logs[-1] = f"processing channel \"{channel.name}\"... lacking permisions"
                     em.description = "\n".join(scan_logs)
-                    await interaction.followup.edit_message(embed=em)
+                    await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
                     continue
 
                 # go through every message on the channel 
@@ -186,14 +186,14 @@ class WordCounterCog(CustomCog):
                         em.description = "\n".join(scan_logs)
                         em.timestamp = now
                         em.set_footer(text="last update")
-                        await interaction.followup.edit_message(embed=em)
+                        await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
 
                         # save the last scan message creation time
                         settings.set_value("latest_scan_message_created_at",  0, interaction.guild.id, channel.id, message.created_at.strftime("%Y-%m-%d %H:%M:%S"))
                 
                 scan_logs[-1] = f"processing channel \"{channel.name}\"... 100.00%"
                 em.description = "\n".join(scan_logs)
-                await interaction.followup.edit_message(embed=em)
+                await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
 
         except Exception as e:
             scan_logs.append(f"unexpected failure!")
@@ -206,7 +206,7 @@ class WordCounterCog(CustomCog):
 
         scan_logs.append("finished!")
         em.description = "\n".join(scan_logs)
-        await interaction.followup.edit_message(embed=em)
+        await interaction.followup.edit_message(message_id=interaction_message.id, embed=em)
 
     # normal word commands
 
