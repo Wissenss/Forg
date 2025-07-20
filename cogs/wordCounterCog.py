@@ -118,27 +118,27 @@ class WordCounterCog(CustomCog):
         em.description = "\n".join(scan_logs)
         await interaction.response.send_message(embed=em)
 
-        # fetch original message to bypass 15 min interaction limit imposed by discord
-        interaction_message = await interaction.original_response()
-        interaction_message = await interaction.channel.fetch_message(interaction_message.id)
-
-        # mark the scan as started
-        self.ongoing_scan = True
-        self.ongoing_scan_channel_id = interaction_message.channel.id
-        self.ongoing_scan_message_id = interaction_message.id
-
-        # fetch channels in the guild
-        scan_logs.append("fetching channels...")
-        em.description = "\n".join(scan_logs)
-        await interaction_message.edit(embed=em)
-
-        guild_channels = interaction.guild.text_channels
-
-        scan_logs[-1] = f"fetching channels... {len(guild_channels)} found"
-        em.description = "\n".join(scan_logs)
-        await interaction_message.edit(embed=em)
-
         try:
+            # fetch original message to bypass 15 min interaction limit imposed by discord
+            interaction_message = await interaction.original_response()
+            interaction_message = await interaction.channel.fetch_message(interaction_message.id)
+
+            # mark the scan as started
+            self.ongoing_scan = True
+            self.ongoing_scan_channel_id = interaction_message.channel.id
+            self.ongoing_scan_message_id = interaction_message.id
+
+            # fetch channels in the guild
+            scan_logs.append("fetching channels...")
+            em.description = "\n".join(scan_logs)
+            await interaction_message.edit(embed=em)
+
+            guild_channels = interaction.guild.text_channels
+
+            scan_logs[-1] = f"fetching channels... {len(guild_channels)} found"
+            em.description = "\n".join(scan_logs)
+            await interaction_message.edit(embed=em)
+
             # got through every channel in the guild
 
             for channel in guild_channels:
