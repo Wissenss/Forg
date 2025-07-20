@@ -7,7 +7,7 @@ CREATE TABLE accounts (
 );
 
 CREATE TABLE settings (
-    name PRIMARY KEY,
+    name,
     discord_user_id INTEGER,
     discord_guild_id INTEGER,
     discord_channel_id INTEGER,
