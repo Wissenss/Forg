@@ -120,8 +120,9 @@ class WordCounterCog(CustomCog):
 
         try:
             # fetch original message to bypass 15 min interaction limit imposed by discord
+            #interaction_message = await interaction.original_response()
+            #interaction_message = await interaction.channel.fetch_message(interaction_message.id)
             interaction_message = await interaction.original_response()
-            interaction_message = await interaction.channel.fetch_message(interaction_message.id)
 
             # mark the scan as started
             self.ongoing_scan = True
