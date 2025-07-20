@@ -166,7 +166,7 @@ class WordCounterCog(CustomCog):
                 async for message in channel.history(limit=1, oldest_first=True):
                     first_message_created_at = message.created_at
                 
-                after = datetime.datetime.strptime(settings.get_value_from_interaction("latest_scan_message_created_at", interaction, constants.DISCORD_EPOCH.strftime("%Y-%m-%d %H:%M:%S")), "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc) # only messages after the last stored scan time will be considered
+                after = datetime.datetime.strptime(settings.get_value("latest_scan_message_created_at", 0, interaction.guild.id, channel.id, constants.DISCORD_EPOCH.strftime("%Y-%m-%d %H:%M:%S")), "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc) # only messages after the last stored scan time will be considered
 
                 async for message in channel.history(limit=None, oldest_first=True, after=after):
                     
@@ -189,7 +189,7 @@ class WordCounterCog(CustomCog):
                         await interaction_message.edit(embed=em)
 
                         # save the last scan message creation time
-                        settings.set_value_from_interaction("latest_scan_message_created_at", interaction, message.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+                        settings.set_value("latest_scan_message_created_at",  0, interaction.guild.id, channel.id, message.created_at.strftime("%Y-%m-%d %H:%M:%S"))
                 
                 scan_logs[-1] = f"processing channel \"{channel.name}\"... 100.00%"
                 em.description = "\n".join(scan_logs)
