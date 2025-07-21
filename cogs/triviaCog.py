@@ -94,7 +94,8 @@ class TriviaCog(CustomCog):
       
       response = requests.get("https://opentdb.com/api.php", params={
           "amount" : 1,
-          "category" : constants.OpenTDBCategory.from_str(category).id
+          "category" : constants.OpenTDBCategory.from_str(category).id,
+          "difficulty": str(difficulty).lower()
       })
 
       if response.status_code != 200:
