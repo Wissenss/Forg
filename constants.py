@@ -97,3 +97,30 @@ class OpenTDBDifficulty(Enum):
                 return difficulty
             
         return None
+    
+class OpenTDBResponseCode(Enum):
+    Success = (0, "Success")
+    NoResult = (1, "No result")
+    InvalidParameter = (2, "Invalid parameter")
+    TokenNotFound = (3, "Token not found")
+    TokenEmpty = (4, "Token empty")
+    RateLimit = (5, "Rate limit")
+
+    def __init__(self, id: int, display: str):
+        self.id : int = id
+        self.display : str = display
+
+    @classmethod
+    def from_str(cls, display_value : str) -> Optional["OpenTDBResponseCode"]:
+        for code in OpenTDBResponseCode:
+            if code.display == display_value:
+                return code
+            
+        return None
+    
+    @classmethod
+    def from_int(cls, id_value : int) -> Optional["OpenTDBResponseCode"]:
+        for code in OpenTDBResponseCode:
+            if code.id == id_value:
+                return code
+            

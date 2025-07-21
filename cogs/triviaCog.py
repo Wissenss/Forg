@@ -24,7 +24,13 @@ class TriviaView(discord.ui.View):
     for o in options:
         self.add_item(TriviaButton(o, self.correct_answer, original_embed))
 
+  def disable_all_items(self):
+     for item in self.children:
+        item.disabled = True
+
   async def on_timeout(self):
+    self.disable_all_items()
+
     self.original_embed.description += "\n\n ⏱️ Time runed out."
 
     await self.response.resource.edit(view=self, embed=self.original_embed)
@@ -45,6 +51,7 @@ class TriviaButton(discord.ui.Button):
     else:
       self.embed.description += f"\n\n ❌ Incorrect. **{interaction.user.display_name}** choosed **{self.option}**."
 
+    self.view.disable_all_items()
     self.view.stop()
 
     await interaction.response.edit_message(view=self.view, embed=self.embed)     
@@ -74,17 +81,33 @@ class TriviaCog(CustomCog):
         constants.OpenTDBCategory.ScienceMathematics.display # type: ignore
       ] = constants.OpenTDBCategory.Any.display               
     ):
-      
-      response = requests.get("https://opentdb.com/api.php", params={
-          "amount" : 1,
-          "category" : constants.OpenTDBCategory.from_str(category).id,
-          "difficulty": str(difficulty).lower()
-      })
+      self.log.info(f"/trivia called. (user.id={interaction.user.id}, difficulty={difficulty}, cateogry={category})")
+
+      em = discord.Embed()
+
+      params = { "amount" : 1}
+    
+      if constants.OpenTDBCategory.from_str(category) != constants.OpenTDBCategory.Any:
+         params["category"] = constants.OpenTDBCategory.from_str(category).id
+
+      if constants.OpenTDBDifficulty.from_str(difficulty) != constants.OpenTDBDifficulty.Any:
+         params["difficulty"] = constants.OpenTDBCategory.from_str(difficulty).display.lower()
+
+      response = requests.get("https://opentdb.com/api.php", params)
 
       if response.status_code != 200:
-        return
-      
+        em.description = f"/trivia database endpoint could not be reached, status code: `{response.status_code}`"
+        return await interaction.response.send_message(embed=em)
+
       data = response.json()
+
+      self.log.debug(f"opentdb (at \"{response.url}\") returned: {data}")
+
+      _response_code     = constants.OpenTDBResponseCode.from_int(int(data["response_code"]))
+
+      if _response_code != constants.OpenTDBResponseCode.Success:
+        em.description = f"open trivia database responded with code: `{_response_code.id}:{_response_code.display}`"
+        return await interaction.response.send_message(embed=em)
 
       _difficulty        = data["results"][0]["difficulty"]
       _type              = data["results"][0]["type"]
@@ -102,7 +125,6 @@ class TriviaCog(CustomCog):
       
       #
 
-      em = discord.Embed()
       em.description = _question
       em.set_footer(text=f"{_category} - {_difficulty}")
 
