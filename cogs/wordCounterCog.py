@@ -211,6 +211,7 @@ class WordCounterCog(CustomCog):
     # normal word commands
 
     @discord.app_commands.command(name="wordquote")
+    @discord.app_commands.describe(word="the word to look for", member="the memeber to look for (optional)")
     async def wordquote(self, interaction : discord.Interaction, word : str, member : Optional[discord.Member] = None):
         if member == None:
             member = interaction.user
@@ -288,7 +289,8 @@ class WordCounterCog(CustomCog):
 
             return await interaction.edit_original_response(embed=em)
 
-    @discord.app_commands.command(name="wordcount")
+    @discord.app_commands.command(name="wordcount", description="Counts how many times a word was said by a member")
+    @discord.app_commands.describe(word="the word to look for", member="the memeber to look for (optional)")
     async def wordcount(self, interaction : discord.Interaction, word : str, member : Optional[discord.Member] = None):
         if member == None:
             member = interaction.user
@@ -325,6 +327,7 @@ class WordCounterCog(CustomCog):
         await interaction.edit_original_response(embed=em)
 
     @discord.app_commands.command(name="wordtop")
+    @discord.app_commands.describe(word="the word to look for")
     async def wordtop(self, interaction : discord.Interaction, word : str):
         cleaned_word = self.clean_message_content(word)
 

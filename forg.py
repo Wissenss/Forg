@@ -30,6 +30,7 @@ async def setup_hook():
     await bot.load_extension("cogs.adminCog")
     await bot.load_extension("cogs.generalCog")
     await bot.load_extension("cogs.wordCounterCog")
+    await bot.load_extension("cogs.triviaCog")
 
     await bot.tree.sync()
 
