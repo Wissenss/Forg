@@ -81,12 +81,14 @@ class TriviaCog(CustomCog):
 
       category: Literal[
         constants.OpenTDBCategory.Any.display, # type: ignore
+        constants.OpenTDBCategory.GeneralKnowledge, # type: ignore
         constants.OpenTDBCategory.History.display, # type: ignore
         constants.OpenTDBCategory.EntertainmentBooks.display, # type: ignore
         constants.OpenTDBCategory.EntertainmentVideoGames.display, # type: ignore
         constants.OpenTDBCategory.EntertainmentFilm.display, # type: ignore
         constants.OpenTDBCategory.EntertainmentJapaneseAnimeAndManga.display, # type: ignore
-        constants.OpenTDBCategory.EntertainmentMusic.display # type: ignore
+        constants.OpenTDBCategory.EntertainmentMusic.display, # type: ignore
+        constants.OpenTDBCategory.ScienceMathematics.display # type: ignore
       ] = constants.OpenTDBCategory.Any.display               
     ):
       
