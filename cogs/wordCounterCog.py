@@ -266,10 +266,9 @@ class WordCounterCog(CustomCog):
             em.description = f"_\"{discord_message.content}\"_"
 
             if discord_message.author:
-                em.set_author(name=discord_message.author.display_name, icon_url=discord_message.author.avatar.url)
+                em.set_author(name=discord_message.author.display_name, icon_url=discord_message.author.avatar.url, url=discord_message.jump_url)
             
             em.timestamp = discord_message.created_at
-            em.url = discord_message.jump_url
 
             return await interaction.edit_original_response(embed=em) 
         
