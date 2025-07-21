@@ -1,5 +1,6 @@
 from typing import Literal
 import random
+import html
 
 import discord
 import discord.ext
@@ -52,24 +53,6 @@ class TriviaCog(CustomCog):
     def __init__(self, bot):
         super().__init__(bot)
 
-    def decode_html_char_codes_in_str(self, encoded_str : str) -> str:
-      decoded_str = encoded_str
-
-      # '
-      decoded_str = decoded_str.replace("&#039;", "'")
-
-      # áéíóú
-      decoded_str = decoded_str.replace("&aacute;", "á")
-      decoded_str = decoded_str.replace("&eacute;", "é")
-      decoded_str = decoded_str.replace("&iacute;", "í")
-      decoded_str = decoded_str.replace("&oacute;", "ó")
-      decoded_str = decoded_str.replace("&uacute;", "ú")
-
-      # &
-      decoded_str = decoded_str.replace("&amp;", "&")
-
-      return decoded_str
-
     @discord.app_commands.command(name="trivia")
     async def trivia(self, interaction : discord.Interaction, 
       difficulty: Literal[
@@ -112,10 +95,10 @@ class TriviaCog(CustomCog):
 
       # cleanup incoming html encoded characters
 
-      _question = self.decode_html_char_codes_in_str(_question)
-      _category = self.decode_html_char_codes_in_str(_category)
-      _correct_answer = self.decode_html_char_codes_in_str(_correct_answer)
-      _incorrect_answers = [self.decode_html_char_codes_in_str(answer) for answer in _incorrect_answers]
+      _question = html.unescape(_question)
+      _category = html.unescape(_category)
+      _correct_answer = html.unescape(_correct_answer)
+      _incorrect_answers = [html.unescape(answer) for answer in _incorrect_answers]
       
       #
 
