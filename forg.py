@@ -28,16 +28,20 @@ async def on_ready():
 
 @bot.event
 async def setup_hook():
+    print("  loading cogs ... ")
+
     await bot.load_extension("cogs.adminCog")
     await bot.load_extension("cogs.generalCog")
     await bot.load_extension("cogs.wordCounterCog")
     await bot.load_extension("cogs.triviaCog")
 
-    for guild in bot.guilds:
-        if guild.id in [constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID, constants.ROLLING_WAVES_REPUBLIC_GUILD_ID]:
-            await bot.tree.sync(guild=discord.Object(id=guild.id))
-
-    await bot.tree.sync()
+    print("  syncing guilds ... ")
+    for guild_id in [constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID, constants.ROLLING_WAVES_REPUBLIC_GUILD_ID]:
+        try:
+            await bot.tree.sync(guild=discord.Object(id=guild_id))
+            print(f"    guild {guild_id}: Success")
+        except Exception as e:
+            print(f"    guild {guild_id}: {repr(e)}")
 
     print("setup finished!")
 

@@ -34,6 +34,9 @@ class WordCounterCog(CustomCog):
         # Remove punctuation and symbols (keep letters, digits, underscores)
         cleaned = re.sub(r"[^\w\s]", "", cleaned)
 
+        # Remove all linefeeds
+        cleaned = cleaned.replace("\n", " ").replace("\r", " ")
+
         # Replace multiple spaces/tabs/newlines with a single space
         text = re.sub(r"\s+", " ", cleaned)
 
@@ -250,7 +253,7 @@ class WordCounterCog(CustomCog):
         LIMIT 1
         """
 
-        result = cur.execute(sql, [member.id, interaction.guild.id] + cleanned_words)
+        result = cur.execute(sql, [member.id, interaction.guild.id] + [f"%{w}%" for w in cleanned_words])
         message = result.fetchone()
 
         database.ConnectionPool.release(con)
@@ -298,9 +301,6 @@ class WordCounterCog(CustomCog):
             return await interaction.edit_original_response(embed=em)
 
     async def __wordcount(self, interaction : discord.Interaction, words : list[str], member : Optional[discord.Member] = None):
-        if member == None:
-            member = interaction.user
-
         cleanned_words = []
 
         for w in words:
@@ -316,26 +316,37 @@ class WordCounterCog(CustomCog):
         sql = f"""
         SELECT SUM(count) 
         FROM messages_word_count 
-        WHERE word IN ({','.join('?' for _ in cleanned_words)}) AND discord_guild_id = ? AND discord_user_id = ? 
+        WHERE word IN ({','.join('?' for _ in cleanned_words)}) AND discord_guild_id = ? {"AND discord_user_id = ?" if member != None else ""} 
         GROUP BY word, discord_guild_id, discord_user_id;
         """
 
-        cur.execute(sql, cleanned_words + [interaction.guild.id, member.id])
+        params = cleanned_words + [interaction.guild.id]
+
+        if member != None:
+            params.append(member.id)
+
+        cur.execute(sql, params)
 
         # TODO: show graph (maybe...)
 
         result = cur.fetchone()
 
         if result == None:
-            em.description = f"**{member.display_name}** has never mention **{", ".join(cleanned_words)}** before"
+            if member:
+                em.description = f"**{member.display_name}** has never mention **{", ".join(cleanned_words)}** before"
+            else:
+                em.description = f"members of **{interaction.guild.name}** have never mention **{", ".join(cleanned_words)}** before"
         else:
             count = result[0]
 
-            em.description = f"**{member.display_name}** has mention **{", ".join(cleanned_words)}** **{count} {"time" if count == 1 else "times"}**"
+            if member:
+                em.description = f"**{member.display_name}** has mention **{", ".join(cleanned_words)}** **{count} {"time" if count == 1 else "times"}**"
+            else:
+                em.description = f"members of **{interaction.guild.name}** have mention **{", ".join(cleanned_words)}** **{count} {"time" if count == 1 else "times"}**"
 
         await interaction.edit_original_response(embed=em)
     
-    async def __wordtop(self, interaction : discord.Interaction, words : list[str]):
+    async def __wordtop(self, interaction : discord.Interaction, words : Optional[list[str]] = []):
         cleanned_words = [self.clean_message_content(w) for w  in words]
 
         em = discord.Embed(title="", description=f"searching **{", ".join(cleanned_words)}** mentions...")
@@ -346,15 +357,16 @@ class WordCounterCog(CustomCog):
         con = database.ConnectionPool.get()
         cur = con.cursor()
 
-        search_condition = "FALSE"
+        search_condition = "FALSE" if words else "TRUE"
 
-        for w in cleanned_words:
+        for _ in cleanned_words:
             search_condition += " OR word = ?"
 
         sql = f"""
         SELECT 
             discord_guild_id, 
-            discord_user_id, 
+            discord_user_id,
+            word, 
             SUM(count) as total_count 
         FROM 
             messages_word_count 
@@ -364,7 +376,7 @@ class WordCounterCog(CustomCog):
             )
             AND discord_guild_id = ? 
         GROUP BY 
-            discord_guild_id, discord_user_id 
+            discord_guild_id, { "discord_user_id" if words else "word" } 
         ORDER BY 
             total_count DESC 
         LIMIT 10;
@@ -374,49 +386,74 @@ class WordCounterCog(CustomCog):
 
         top_counts = cur.fetchall()
 
-        # create table
-        table = ""
-        table += f"#  | Member            |   Mentions\n"
-        table += f"{"".ljust(35, "-")}\n"
+        if words:
+            # create table
+            table = ""
+            table += f"#  | Member            |   Mentions\n"
+            table += f"{"".ljust(35, "-")}\n"
 
-        for i, count in enumerate(top_counts):
-            discord_guild_id = count[0]
-            discord_user_id  = count[1]
-            total_count = count[2]
+            for i, count in enumerate(top_counts):
+                discord_guild_id = count[0]
+                discord_user_id  = count[1]
+                word = count[2]
+                total_count = count[3]
 
-            author = interaction.guild.get_member(discord_user_id)
+                author = interaction.guild.get_member(discord_user_id)
 
-            table += f"{str(i+1).zfill(2)} | {str(author.display_name if author else "unknown").ljust(17)} | {str(total_count).zfill(5).rjust(10)}\n"
+                table += f"{str(i+1).zfill(2)} | {str(author.display_name if author else "unknown").ljust(17)} | {str(total_count).zfill(5).rjust(10)}\n"
 
-        em.description = ""
-        em.add_field(name=f"Top members that have mention {", ".join(cleanned_words)}", value=f"```{table}```", inline=False)
+            em.description = ""
+            em.add_field(name=f"Top members that have mention {", ".join(cleanned_words)}", value=f"```{table}```", inline=False)
+        else:
+            # create table
+            table = ""
+            table += f"#  | Word              |   Mentions\n"
+            table += f"{"".ljust(35, "-")}\n"
+
+            for i, count in enumerate(top_counts):
+                discord_guild_id = count[0]
+                discord_user_id  = count[1]
+                word = count[2]
+                total_count = count[3]
+
+                author = interaction.guild.get_member(discord_user_id)
+
+                table += f"{str(i+1).zfill(2)} | {word.ljust(17)} | {str(total_count).zfill(5).rjust(10)}\n"
+
+            em.description = ""
+            em.add_field(name=f"Top words mention by **{interaction.guild.name}** members", value=f"```{table}```", inline=False)
 
         await interaction.edit_original_response(embed=em)
     
     # normal word commands
 
     @discord.app_commands.command(name="wordquote")
-    @discord.app_commands.describe(word="the word to look for", member="the memeber to look for (optional)")
+    @discord.app_commands.describe(word="the word to look for", member="the member to look for (optional), if none the quote is from a random member")
     @discord.app_commands.guilds(constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID)
     async def wordquote(self, interaction : discord.Interaction, word : str, member : Optional[discord.Member] = None):
        return await self.__wordquote(interaction, word.split(","), member)
 
     @discord.app_commands.command(name="wordcount", description="counts how many times a word was mention")
-    @discord.app_commands.describe(word="the word to look for", member="the memeber to look for (optional)")
+    @discord.app_commands.describe(word="the word to look for", member="the memeber to look mentions for (optional), if none the count is global")
     @discord.app_commands.guilds(constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID)
     async def wordcount(self, interaction : discord.Interaction, word : str, member : Optional[discord.Member] = None):
         return await self.__wordcount(interaction, word.split(","), member)
 
     @discord.app_commands.command(name="wordtop")
-    @discord.app_commands.describe(word="the word to look for")
+    @discord.app_commands.describe(word="the word to look for (optional), if none the command retrieves the top words mention")
     @discord.app_commands.guilds(constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID)
-    async def wordtop(self, interaction : discord.Interaction, word : str):
-        return await self.__wordtop(interaction, word.split(","))
+    async def wordtop(self, interaction : discord.Interaction, word : str = None):
+        if word == None:
+            word_list = []
+        else:
+            word_list = word.split(",")
+            
+        return await self.__wordtop(interaction, word_list)
 
     # n-word commands
 
     @discord.app_commands.command(name="nwordquote", description="gets a random quote from someone that said the nword")
-    @discord.app_commands.describe(member="the member to look for (options), if none the quote is from a random member")
+    @discord.app_commands.describe(member="the member to look for (optional), if none the quote is from a random member")
     @discord.app_commands.guilds(constants.DEV_GUILD_ID, constants.ROLLING_WAVES_REPUBLIC_GUILD_ID)
     async def nwordquote(self, interaction : discord.Interaction, member : Optional[discord.Member] = None):
         return await self.__wordquote(interaction, self.nword_variations, member)
