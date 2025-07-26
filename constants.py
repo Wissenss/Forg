@@ -1,8 +1,14 @@
 from enum import Enum
 import datetime
 from typing import Optional
+import discord
 
 DISCORD_EPOCH = datetime.datetime(2015, 1, 1, 0, 0, 0, 0, tzinfo=datetime.timezone.utc) # the time discord was born
+
+ROLLING_WAVES_REPUBLIC_GUILD_ID = 858776641174372382
+KUVA_GUILD_ID = 638943159581147137
+DEV_GUILD_ID = 1178465444701687878
+BUTTHOLE_LOVERS_GUILD_ID = 821940114648334416
 
 class AccountAccessLevel(Enum):
     DEVELOPER = 0
