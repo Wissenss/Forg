@@ -21,9 +21,11 @@ class GeneralCog(CustomCog):
 
     @discord.app_commands.command(name="about")
     async def about(self, interaction : discord.Interaction):
-        em = discord.Embed(title="forg", description="")
+        em = discord.Embed(title="Haruko", description="")
 
-        em.description += "\nRolling Waves Republic Humble Assistant"
+        #em.description += "\nRolling Waves Republic Humble Assistant"
+
+        em.description += "\nThis bot is developed for free. If you would like to contribute [here is how](https://ko-fi.com/wissens/?widget=true&hidefeed=true)."
 
         return await interaction.response.send_message(embed=em)
     

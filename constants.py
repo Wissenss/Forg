@@ -130,3 +130,14 @@ class OpenTDBResponseCode(Enum):
             if code.id == id_value:
                 return code
             
+class TransactionKind(Enum):
+    REWARD = 1000
+    REWARD_TRIVIA = REWARD + 200
+    REWARD_MESSAGE = REWARD + 400
+
+    TRANSFER = 2000
+    TRANSFER_INCOME = TRANSFER + 200
+    TRANSFER_OUTCOME = TRANSFER + 400
+
+    PURCHASE = 3000
+    PURCHASE_SHOP = PURCHASE + 1

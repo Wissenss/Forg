@@ -11,18 +11,20 @@ import requests
 import constants
 import database
 from cogs.customCog import CustomCog
+from cogs.economyCog import EconomyCog
 import security
 
 class TriviaView(discord.ui.View):
-  def __init__(self, options: list[str], correct_answer: str, original_embed : discord.Embed):
+  def __init__(self, options: list[str], correct_answer: str, difficulty : str, original_embed : discord.Embed):
     super().__init__(timeout=180)
 
     self.response : discord.InteractionCallbackResponse = None
     self.correct_answer = correct_answer
     self.original_embed = original_embed
+    self.difficulty = difficulty
 
     for o in options:
-        self.add_item(TriviaButton(o, self.correct_answer, original_embed))
+        self.add_item(TriviaButton(o, self.correct_answer, difficulty, original_embed))
 
   def disable_all_items(self):
      for item in self.children:
@@ -36,18 +38,35 @@ class TriviaView(discord.ui.View):
     await self.response.resource.edit(view=self, embed=self.original_embed)
 
 class TriviaButton(discord.ui.Button):
-  def __init__(self, option: str, correct_answer: str, original_embed : discord.Embed):
+  def __init__(self, option: str, correct_answer: str, difficulty : str, original_embed : discord.Embed):
     super().__init__(label=option, style=discord.ButtonStyle.secondary)
 
     self.option = option
     self.correct_answer = correct_answer
     self.embed = original_embed
+    self.difficulty = difficulty
 
   async def callback(self, interaction: discord.Interaction):
     # TODO: check the responder is the same as the creator
     
     if self.option == self.correct_answer:
       self.embed.description += f"\n\n ✅ Correct. **{interaction.user.display_name}** choosed **{self.option}**."
+
+      # reward correct answers
+
+      reward = 10
+
+      if self.difficulty == "hard":
+        reward *= 2
+      elif self.difficulty == "medium":
+        reward *= 1.5
+      
+      EconomyCog.create_transaction_autocommit(constants.TransactionKind.REWARD_TRIVIA, interaction.user.id, interaction.guild.id, reward)
+
+      #
+
+      self.embed.set_footer(text=self.embed.footer.text + f" | Reward: ${reward:.2f}") 
+
     else:
       self.embed.description += f"\n\n ❌ Incorrect. **{interaction.user.display_name}** choosed **{self.option}**."
 
@@ -88,10 +107,10 @@ class TriviaCog(CustomCog):
       params = { "amount" : 1}
     
       if constants.OpenTDBCategory.from_str(category) != constants.OpenTDBCategory.Any:
-         params["category"] = constants.OpenTDBCategory.from_str(category).id
+        params["category"] = constants.OpenTDBCategory.from_str(category).id
 
       if constants.OpenTDBDifficulty.from_str(difficulty) != constants.OpenTDBDifficulty.Any:
-         params["difficulty"] = constants.OpenTDBCategory.from_str(difficulty).display.lower()
+        params["difficulty"] = constants.OpenTDBDifficulty.from_str(difficulty).display.lower()
 
       response = requests.get("https://opentdb.com/api.php", params)
 
@@ -126,14 +145,14 @@ class TriviaCog(CustomCog):
       #
 
       em.description = _question
-      em.set_footer(text=f"{_category} - {_difficulty}")
+      em.set_footer(text=f"{_category}: {_difficulty}")
 
       _options : list[str] = _incorrect_answers
       _options.append(_correct_answer)
       
       random.shuffle(_options)
 
-      vi = TriviaView(options=_options, correct_answer=_correct_answer, original_embed=em)
+      vi = TriviaView(options=_options, correct_answer=_correct_answer, difficulty=_difficulty, original_embed=em)
       vi.response = await interaction.response.send_message(view=vi, embed=em)
 
 async def setup(bot):

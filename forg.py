@@ -34,6 +34,7 @@ async def setup_hook():
     await bot.load_extension("cogs.generalCog")
     await bot.load_extension("cogs.wordCounterCog")
     await bot.load_extension("cogs.triviaCog")
+    await bot.load_extension("cogs.economyCog")
 
     print("  syncing guilds ... ")
     for guild_id in [constants.DEV_GUILD_ID, constants.KUVA_GUILD_ID, constants.BUTTHOLE_LOVERS_GUILD_ID, constants.ROLLING_WAVES_REPUBLIC_GUILD_ID]:
@@ -42,6 +43,8 @@ async def setup_hook():
             print(f"    guild {guild_id}: Success")
         except Exception as e:
             print(f"    guild {guild_id}: {repr(e)}")
+
+    await bot.tree.sync()
 
     print("setup finished!")
 

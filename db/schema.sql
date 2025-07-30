@@ -32,6 +32,16 @@ CREATE TABLE messages_word_count (
     count INTEGER,
     PRIMARY KEY(word, discord_guild_id, discord_channel_id, discord_user_id)
 );
+CREATE TABLE transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind INTEGER,
+  discord_user_id INTEGER,
+  discord_guild_id INTEGER,
+  related_transaction_id INTEGER,
+  amount REAL,
+  timestamp TEXT
+);
 -- Dbmate schema migrations
 INSERT INTO "migrations" (version) VALUES
-  ('20250717070747');
+  ('20250717070747'),
+  ('20250727203847');

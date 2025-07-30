@@ -14,7 +14,7 @@ class AdminCog(CustomCog):
         super().__init__(bot)
 
     @discord.app_commands.command(name="elevate")
-    async def ping(self, interaction : discord.Interaction, member : discord.Member, level: Literal["admin", "moderator", "member"]):
+    async def elevate(self, interaction : discord.Interaction, member : discord.Member, level: Literal["admin", "moderator", "member"]):
       em = discord.Embed(title="", description="")
 
       if not security.account_has_permision(interaction.user.id, interaction.guild.id, constants.Permission.ADMIN_COG_ELEVATE):
